@@ -176,10 +176,11 @@ int bscan_tunnel_ir_width; /* if zero, then tunneling is not present/active */
 uint8_t bscan_zero[4] = {0};
 uint8_t bscan_one[4] = {1};
 
-uint8_t ir_user4[4] = {0x23};
+uint8_t k7_ir_user4[4] = {0x23}; /* xilinx kintex-7 series, use the bscan2 primitive which USER4 IR is 0x23 */
+uint8_t s6_ir_user4[4] = {0x1b}; /* xilinx spartan-6 series, use the spartan-6 bscan primitive which USER4 IR is 0x1b */
 struct scan_field select_user4 = {
 	.in_value = NULL,
-	.out_value = ir_user4
+	.out_value = k7_ir_user4
 };
 
 
@@ -2513,6 +2514,27 @@ COMMAND_HANDLER(riscv_set_ebreaku)
 	return ERROR_OK;
 }
 
+COMMAND_HANDLER(riscv_set_board)
+{
+	if (CMD_ARGC != 1) {
+		LOG_ERROR("Command takes exactly 1 parameter");
+		return ERROR_COMMAND_SYNTAX_ERROR;
+	}
+	if (!strcmp(CMD_ARGV[0], "K7")) {
+		LOG_INFO("Select Xilinx kintex 7 FPGA while using the BSCAN");
+		return ERROR_OK;
+	}
+	else if (!strcmp(CMD_ARGV[0], "S6")) {
+		LOG_INFO("Select the Xilinx spartan 6 FPGA while using the BSCAN");
+		select_user4.out_value = s6_ir_user4;
+		return ERROR_OK;
+	}
+	else
+	{
+		LOG_DEBUG("Unsupportly parameter");
+		return ERROR_COMMAND_SYNTAX_ERROR;
+	}
+}
 static const struct command_registration riscv_exec_command_handlers[] = {
 	{
 		.name = "test_compliance",
@@ -2678,6 +2700,13 @@ static const struct command_registration riscv_exec_command_handlers[] = {
 		.usage = "riscv set_ebreaku on|off",
 		.help = "Control dcsr.ebreaku. When off, U-mode ebreak instructions "
 			"don't trap to OpenOCD. Defaults to on."
+	},
+	{
+		.name = "set_board",
+		.handler = riscv_set_board,
+		.mode = COMMAND_ANY,
+		.usage = "riscv set_board K7|S6",
+		.help = "Select the Xilinx FPGA board while using BSCAN."
 	},
 	COMMAND_REGISTRATION_DONE
 };
